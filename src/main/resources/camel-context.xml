@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:camel="http://camel.apache.org/schema/spring"
+       xmlns:cxf="http://camel.apache.org/schema/cxf"
+       xmlns:osgi="http://www.springframework.org/schema/osgi"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/osgi http://www.springframework.org/schema/osgi/spring-osgi.xsd
+       http://camel.apache.org/schema/cxf http://camel.apache.org/schema/cxf/camel-cxf.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+       http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
+
+	<bean class="org.apache.cxf.ws.security.wss4j.WSS4JInInterceptor" id="Sign_Request">
+		<constructor-arg>
+			<map>
+				<entry key="action" value="Signature"/>
+				<entry key="signaturePropFile" value="etc/Server_SignVerf.properties"/>
+				<entry key="signatureAlgorithm" value="http://www.w3.org/2001/04/xmldsig-more#gostr34102001-gostr3411"/>
+				<entry key="signatureDigestAlgorithm" value="http://www.w3.org/2001/04/xmldsig-more#gostr3411"/>
+				<entry key="passwordCallbackClass" value="com.xyz.ws.security.KeystorePasswordCallback"/>
+				<entry key="actor" value="http://smev.gosuslugi.ru/actors/smev"/>
+				<entry key="mustUnderstand" value="false"/>
+				<entry key="wss4j.processor.map">
+                    <map key-type="javax.xml.namespace.QName" value-type="java.lang.Class">
+                        <entry>
+                            <key>
+                                <bean class="javax.xml.namespace.QName">
+                                    <constructor-arg value="http://www.w3.org/2000/09/xmldsig#"/>
+                                    <constructor-arg value="Signature"/>
+                                </bean>
+                            </key>
+                            <value>com.xyz.ws.security.LocalSignatureProcessor</value>
+                        </entry>
+                    </map>
+                </entry>
+			</map>
+		</constructor-arg>
+	</bean>
+
+  <cxf:cxfEndpoint id="reportEndpoint"
+                   address="/report/"
+                   serviceClass="org.apache.camel.example.reportincident.ReportIncidentEndpoint"
+                   wsdlURL="wsdl/report_incident.wsdl">
+                   <cxf:inInterceptors>
+						<ref bean="Sign_Request"/>
+                   </cxf:inInterceptors>
+  </cxf:cxfEndpoint>
+  
+  
+
+  <camelContext xmlns="http://camel.apache.org/schema/spring">
+    <route>
+      <from uri="cxf:bean:reportEndpoint"/>
+      <log message="Received report incident ${body}"/>
+      <to uri="language:constant:classpath:ok.xml"/>
+      <convertBodyTo type="org.apache.camel.example.reportincident.OutputReportIncident"/>
+    </route>
+  </camelContext>
+
+</beans>
